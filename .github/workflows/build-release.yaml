@@ -5,7 +5,8 @@ on:
     types: [published]
 
 permissions:
-  contents: write
+  contents: write      # Grant write access to repository contents
+  id-token: write      # Needed to upload release assets with GitHub Token
 
 jobs:
   build:

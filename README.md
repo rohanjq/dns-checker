@@ -11,3 +11,6 @@ export DNS_HOSTNAME=go.dev
 ~~~
 
 ![Alt text](images/demo.png)
+![Alt text](images/demo2.png)
+
+
