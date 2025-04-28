@@ -16,40 +16,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '>=1.20' # Or your desired Go version
+          go-version: '>=1.20'
+
       - name: Build Binary (Linux)
         run: |
           go build -ldflags="-s -w" -o ${{ github.event.repository.name }}-linux .
-      - name: Upload Binary to Release (Linux)
-        uses: actions/upload-release-asset@v1
+
+      - name: Upload Binary to GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ github.event.repository.name }}-linux
-          asset_name: ${{ github.event.repository.name }}-linux
-          asset_content_type: application/octet-stream
+          files: ${{ github.event.repository.name }}-linux
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create Release
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const github = require('@actions/github')
-            const context = github.context
+# No second "release" job needed anymore — softprops/action-gh-release uploads directly to the current release!
 
-            const { owner, repo } = context.repo
-            const { tag_name, body } = context.payload.release
-
-            await github.rest.repos.updateRelease({
-              owner,
-              repo,
-              release_id: context.payload.release.id,
-              name: tag_name,
-              body: body
-            })
