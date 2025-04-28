@@ -1,6 +1,6 @@
 # dns-checker
 
-- Download dns-checker binary from releases, only compiled for windows as of now
+- Download dns-checker binary from releases, only compiled for linux as of now
 - Requires dig binary, that is why above
 
 ~~~
