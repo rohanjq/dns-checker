@@ -1,23 +1,22 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"os/exec"
 	"sort"
+	"strings"
 	"time"
 )
 
 const (
-	timeoutThreshold = 5 * time.Second
-	interval         = 50 * time.Millisecond
-	logFilePath      = "dns_results.log"
-	maxHistoryWindow = 5 * time.Minute
-	topN             = 5
-	maxRecords       = 10000 // Maximum records to keep for percentile calculation
+	slowResponseDuration = 5 * time.Second
+	interval             = 50 * time.Millisecond
+	logFilePath          = "dns_results.log"
+	maxHistoryWindow     = 5 * time.Minute
+	topN                 = 5
+	maxRecords           = 1000000
 )
 
 type queryResult struct {
@@ -57,24 +56,19 @@ func main() {
 	defer logFile.Close()
 	logger := log.New(logFile, "", log.LstdFlags)
 
-	resolver := net.Resolver{}
 	fmt.Printf("🔍 Starting DNS probe for hostname: %s\n", hostname)
 
 	for {
-		start := time.Now()
-		ctx, cancel := context.WithTimeout(context.Background(), timeoutThreshold)
-		ips, err := resolver.LookupHost(ctx, hostname)
-		duration := time.Since(start)
-		cancel()
-
 		now := time.Now()
+		ips, duration, err := resolveHostnameWithDig(hostname)
 
 		if err != nil {
 			failureCount++
 			lastResult = fmt.Sprintf("❌ FAIL (%v)", err)
 			lastDuration = duration
+			lastResolvedIPs = nil
 			logger.Printf("[%s] FAIL - Error: %v - Time: %v\n", now.Format("2006-01-02 15:04:05.000"), err, duration)
-		} else if duration > timeoutThreshold {
+		} else if duration > slowResponseDuration {
 			slowCount++
 			lastResult = "🐢 SLOW"
 			lastDuration = duration
@@ -97,13 +91,34 @@ func main() {
 	}
 }
 
+// resolveHostnameWithDig uses the `dig` command to resolve a hostname.
+func resolveHostnameWithDig(hostname string) ([]string, time.Duration, error) {
+	start := time.Now()
+
+	cmd := exec.Command("dig", "+short", hostname)
+	output, err := cmd.CombinedOutput()
+
+	duration := time.Since(start)
+
+	if err != nil {
+		return nil, duration, fmt.Errorf("dig command failed: %v", err)
+	}
+
+	// Parse IPs from the output of dig command.
+	ips := strings.Fields(string(output))
+
+	if len(ips) == 0 {
+		return nil, duration, fmt.Errorf("no IPs found in dig output")
+	}
+
+	return ips, duration, nil
+}
+
 func cleanupOldResults() {
-	// Ensure that resultHistory does not exceed maxRecords for percentile calculation
 	if len(resultHistory) > maxRecords {
 		resultHistory = resultHistory[len(resultHistory)-maxRecords:]
 	}
 
-	// Clean up results older than maxHistoryWindow
 	cutoff := time.Now().Add(-maxHistoryWindow)
 	filtered := resultHistory[:0]
 	for _, r := range resultHistory {
@@ -166,7 +181,6 @@ func getTopSlowest() []queryResult {
 		}
 	}
 
-	// Sort the slow results by duration
 	sort.Slice(slowResults, func(i, j int) bool {
 		return slowResults[i].Duration > slowResults[j].Duration
 	})
@@ -188,26 +202,25 @@ func printPercentiles(history []queryResult) {
 	}
 	sort.Float64s(durations)
 
-	percentiles := []int{50, 75, 90, 95, 99, 999} // Added 99.9 percentile (999)
+	percentiles := []int{50, 75, 90, 95, 99, 999}
 	for _, p := range percentiles {
-		// Adjust the printing logic to handle 999 for the 99.9 percentile
 		if p == 999 {
-			val := percentile(durations, 99) // Use 99 for the 99.9 percentile
+			val := percentile(durations, 99.9)
 			bar := buildBar(val, durations[len(durations)-1])
 			fmt.Printf("P99.9 │ %s %dms\n", bar, int(val))
 		} else {
-			val := percentile(durations, p)
+			val := percentile(durations, float64(p))
 			bar := buildBar(val, durations[len(durations)-1])
-			fmt.Printf("P%02d │ %s %dms\n", p, bar, int(val))
+			fmt.Printf("P%02d   │ %s %dms\n", p, bar, int(val))
 		}
 	}
 }
 
-func percentile(sorted []float64, percent int) float64 {
+func percentile(sorted []float64, percent float64) float64 {
 	if len(sorted) == 0 {
 		return 0
 	}
-	k := float64(percent) / 100 * float64(len(sorted)-1)
+	k := percent / 100 * float64(len(sorted)-1)
 	f := int(k)
 	c := f + 1
 	if c >= len(sorted) {
