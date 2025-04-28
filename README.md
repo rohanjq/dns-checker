@@ -1,7 +1,7 @@
 # dns-checker
 
-- Download dns-checker binary from releases
-- Requires dig binary, so probably you should run on linux
+- Download dns-checker binary from releases, only compiled for windows as of now
+- Requires dig binary, that is why above
 
 ~~~
 export DNS_HOSTNAME=go.dev
