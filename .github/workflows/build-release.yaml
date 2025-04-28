@@ -31,4 +31,6 @@ jobs:
           asset_path: dns-checker
           asset_name: dns-checker
           asset_content_type: application/octet-stream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Ensure the token is passed explicitly
 
