@@ -4,14 +4,15 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write # Grant write access to repository contents for all jobs
+
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goos: [linux]
-    permissions:
-      contents: write # Grant write access here for uploading assets
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -33,8 +34,6 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # Grant write access here for updating release info (if needed)
     steps:
       - name: Create Release
         uses: actions/github-script@v6
