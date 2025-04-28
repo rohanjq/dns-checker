@@ -1,6 +1,6 @@
 # dns-checker
 
-
+- Download dns-checker binary from releases
 - Requires dig binary, so probably you should run on linux
 
 ~~~
