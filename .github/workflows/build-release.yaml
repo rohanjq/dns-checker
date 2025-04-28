@@ -1,4 +1,4 @@
-name: Build and Release Binaries (Linux Only)
+name: Build and Release Binaries2(Linux Only)
 
 on:
   release:
