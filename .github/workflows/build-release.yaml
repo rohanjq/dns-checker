@@ -5,14 +5,11 @@ on:
     types: [published]
 
 permissions:
-  contents: write # Grant write access to repository contents for all jobs
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,12 +21,10 @@ jobs:
 
       - name: Build Binary (Linux)
         run: |
-          go build -ldflags="-s -w" -o ${{ github.event.repository.name }}-linux .
+          go build -ldflags="-s -w" -o dns-checker-linux .
 
-      - name: Upload Binary to GitHub Release
+      - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ github.event.repository.name }}-linux
-
-# No second "release" job needed anymore — softprops/action-gh-release uploads directly to the current release!
+          files: dns-checker-linux
 
