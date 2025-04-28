@@ -10,6 +10,8 @@ jobs:
     strategy:
       matrix:
         goos: [linux]
+    permissions:
+      contents: write # Grant write access here for uploading assets
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,7 +34,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Grant write access to repository contents for this job
+      contents: write # Grant write access here for updating release info (if needed)
     steps:
       - name: Create Release
         uses: actions/github-script@v6
